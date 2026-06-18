@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7
+    container_name: project-management-mongodb-dev
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password
+    networks:
+      - project-network
+
+  # Backend Service (Development)
+  backend:
+    build:
+      context: ./project managment system/backend
+      dockerfile: Dockerfile.dev
+    container_name: project-management-backend-dev
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://admin:password@mongodb:27017/project-management?authSource=admin
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+      - FRONTEND_URL=http://localhost:3001
+      - PORT=5001
+    depends_on:
+      - mongodb
+    networks:
+      - project-network
+    volumes:
+      - ./project managment system/backend:/app
+      - /app/node_modules
+    command: npm run dev
+
+  # Frontend Service (Development)
+  frontend:
+    build:
+      context: ./project managment system/frontend
+      dockerfile: Dockerfile.dev
+    container_name: project-management-frontend-dev
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5001
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
+    networks:
+      - project-network
+    volumes:
+      - ./project managment system/frontend:/app
+      - /app/node_modules
+    stdin_open: true
+    tty: true
+
+volumes:
+  mongodb_data:
+    driver: local
+
+networks:
+  project-network:
+    driver: bridge
